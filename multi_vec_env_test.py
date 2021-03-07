@@ -72,7 +72,7 @@ if __name__ == "__main__":
     masks = np.array(masks)
 
     swarmnet_params = load_model_params('config/il_rl.json')
-    actorcritic = get_swarmnet_actorcritic(swarmnet_params, '../../Logs/swarmnet_rl_test')
+    actorcritic = get_swarmnet_actorcritic(swarmnet_params, './logs/rl')
 
     swarmnet_agent = PPOAgent(actorcritic, NDIM,
                               action_bound=None,

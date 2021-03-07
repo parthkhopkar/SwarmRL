@@ -12,21 +12,26 @@ from tensorflow.python.keras.backend import update
 
 import utils
 from ppo_agent import ACTOR_UPDATE_STEPS, PPOAgent
-from swarms.rl_extensions.envs import BoidSphereEnv2D
+from gym_pybullet_drones.envs.multi_agent_rl.GoalAviary import GoalAviary
+from gym_pybullet_drones.envs.single_agent_rl.BaseSingleAgentAviary import \
+    ActionType
+from gym_pybullet_drones.utils.utils import sync
 
+Z = 0.5
 NDIM = 2
 EDGE_TYPES = 4
 
-MIN_NUM_BOIDS = 1
-MAX_NUM_BOIDS = 5
-MIN_NUM_SPHERES = 1
-MAX_NUM_SPHERES = 3
+MIN_NUM_DRONES = 1
+MAX_NUM_DRONES = 5
+MIN_NUM_OBSTACLES = 1
+MAX_NUM_OBSTACLES = 1
 NUM_GOALS = 1
-MAX_NUM_NODES = MAX_NUM_BOIDS + MAX_NUM_SPHERES + NUM_GOALS
+MAX_NUM_NODES = MAX_NUM_DRONES + MAX_NUM_OBSTACLES + NUM_GOALS
 DT = 0.3
 
 BOID_SIZE = 2
 SPHERE_SIZE = 7
+NOISE = 0.0
 
 ACTION_BOUND = 5. * DT
 
@@ -78,39 +83,79 @@ def train(agent, value_only=False):
     reward_all_episodes = []
     ts = []
     step = 0
+    initial_positions = [[-1,1,Z], [-1,1.5,Z], [-1,0,Z],[-1,-0.5,Z],[-1,-1,Z]]
+    goal_x, goal_y = 3.,3.
+    goal_pos = [goal_x, goal_y, 0.05]
+    obstacle_x, obstacle_y = 1.5, 1.5
+    obstacle_pos = [(obstacle_x, obstacle_y, Z)]
+    obstacle_present = True
+    static_entities = 1 + (1 if obstacle_present else 0)
+    # Initialize num_boids and num_spheres.
+    num_drones = MAX_NUM_DRONES  # np.random.randint(MIN_NUM_DRONES, MAX_NUM_DRONES + 1)
+    num_obstacles = MAX_NUM_OBSTACLES  # np.random.randint(MIN_NUM_OBSTACLES, MAX_NUM_OBSTACLES + 1)
+    env = GoalAviary(gui=False, 
+                    record=False,
+                    num_drones=num_drones,
+                    act=ActionType.PID,
+                    initial_xyzs=np.array(initial_positions),
+                    aggregate_phy_steps=int(5),
+                    goal_pos=goal_pos,
+                    obstacle_pos=obstacle_pos,
+                    noise=NOISE
+                    )
     for episode in range(ARGS.epochs):
-        # Initialize num_boids and num_spheres.
-        num_boids = np.random.randint(MIN_NUM_BOIDS, MAX_NUM_BOIDS + 1)
-        num_spheres = np.random.randint(MIN_NUM_SPHERES, MAX_NUM_SPHERES + 1)
         # Create mask.
-        mask = utils.get_mask(num_boids, MAX_NUM_NODES)
+        mask = utils.get_mask(num_drones, MAX_NUM_NODES)
         # Form edges as part of inputs to swarmnet.
-        edges = utils.system_edges(NUM_GOALS, num_spheres, num_boids)
+        # TODO: Edges are now returned by the environment
+        edges = utils.system_edges(NUM_GOALS, num_drones, num_obstacles)
         edge_types = one_hot(edges, EDGE_TYPES)
         padded_edge_types = utils.pad_data(edge_types, MAX_NUM_NODES, dims=[0, 1])
 
-        env = BoidSphereEnv2D(num_boids, num_spheres, NUM_GOALS, DT,
-                              boid_size=BOID_SIZE, sphere_size=SPHERE_SIZE)
-        state = env.reset()  # When seed is provided, env is essentially fixed.
-        state = utils.combine_env_states(*state)  # Shape [1, NUM_GOALS+num_spahers+num_boids, 4]
+        # TODO: Create env(s) once outside the loop and reset it for now 
+        # env = BoidSphereEnv2D(num_boids, num_spheres, NUM_GOALS, DT,
+        #                       boid_size=BOID_SIZE, sphere_size=SPHERE_SIZE)
+        state = env.reset()  # Received observations for each agent as a nested dictionary {i: {'nodes': ... , 'edges': ...}}
+        for agent_idx in range(num_drones):
+            state[agent_idx]['nodes'] = np.expand_dims(state[agent_idx]['nodes'],0)  # Insert time step dimension
 
+        # state = utils.combine_env_states(*state)  # Shape [1, NUM_GOALS+num_spahers+num_boids, 4]
+        action = {i:np.array([0.,0.,0.]) for i in range(num_drones)}
         reward_episode = 0
         for t in range(T_MAX):
-            padded_state = utils.pad_data(state, MAX_NUM_NODES, [1])
-            padded_action, padded_log_prob = agent.act(
-                [padded_state, padded_edge_types], mask, training=True)
+            # Lists for storing the states of all agents
+            padded_states = []
+            padded_actions = []
+            padded_log_probs = []
+            padded_next_states = []
+            padded_rewards = []
+            for agent_idx in range(num_drones):
+                padded_state = utils.pad_data(state[agent_idx]['nodes'], MAX_NUM_NODES, [1])
+                padded_action, padded_log_prob = agent.act([padded_state, padded_edge_types], mask, training=True)
+                # Store in lists
+                padded_states.append(padded_state)
+                padded_actions.append(padded_actions)
+                padded_log_probs.append(padded_log_prob)
 
-            # Ignore "actions" from goals and obstacles.
-            action = padded_action[-num_boids:, :]
+                print(f'Agent {agent_idx} action', padded_action, padded_action.shape)
+                # Fill in action dict
+                # Ignore "actions" from goals and obstacles.
+                action[agent_idx][:2] = padded_action[-num_drones+agent_idx]
 
-            next_state, reward, done = env.step(action)
-            next_state = utils.combine_env_states(*next_state)
+            # Step in the environment
+            next_state, reward, done, info = env.step(action)
 
-            padded_next_state = utils.pad_data(next_state, MAX_NUM_NODES, [1])
-            padded_reward = utils.pad_data(reward, MAX_NUM_NODES, [0])
+            for agent_idx in range(num_drones):
+                next_state[agent_idx]['nodes'] = np.expand_dims(next_state[agent_idx]['nodes'],0)  # Insert time step dimension
+                padded_next_state = utils.pad_data(next_state[agent_idx]['nodes'], MAX_NUM_NODES, [1])
+                padded_reward = utils.pad_data(reward[agent_idx], MAX_NUM_NODES, [0])
+                # Store in lists
+                padded_next_states.append(padded_next_state)
+                padded_rewards.append(padded_reward)
 
-            agent.store_transition([padded_state, padded_edge_types], padded_action, padded_reward,
-                                   padded_log_prob, [padded_next_state, padded_edge_types], done, mask)
+            for agent_idx in range(num_drones):
+                agent.store_transition([padded_states[agent_idx], padded_edge_types], padded_actions[agent_idx], padded_rewards[agent_idx],
+                                   padded_log_probs[agent_idx], [padded_next_states[agent_idx], padded_edge_types], done, mask)
 
             state = next_state
             reward_episode += np.sum(reward)
