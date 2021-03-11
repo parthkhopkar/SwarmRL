@@ -104,13 +104,19 @@ def train(agent, value_only=False):
                     noise=NOISE
                     )
     for episode in range(ARGS.epochs):
+        # Initialize num_boids and num_spheres.
+        num_boids = MAX_NUM_DRONES # np.random.randint(MIN_NUM_BOIDS, MAX_NUM_BOIDS + 1)
+        num_spheres = MAX_NUM_OBSTACLES # np.random.randint(MIN_NUM_SPHERES, MAX_NUM_SPHERES + 1)
+        print(f'No. of boids: {num_boids}, No. of Spheres: {num_spheres}')
         # Create mask.
         mask = utils.get_mask(num_drones, MAX_NUM_NODES)
         # Form edges as part of inputs to swarmnet.
         # TODO: Edges are now returned by the environment
         edges = utils.system_edges(NUM_GOALS, num_drones, num_obstacles)
         edge_types = one_hot(edges, EDGE_TYPES)
+        print('edge types', edge_types)
         padded_edge_types = utils.pad_data(edge_types, MAX_NUM_NODES, dims=[0, 1])
+        print('Padded edges', padded_edge_types)
 
         # TODO: Create env(s) once outside the loop and reset it for now 
         # env = BoidSphereEnv2D(num_boids, num_spheres, NUM_GOALS, DT,

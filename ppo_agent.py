@@ -151,7 +151,7 @@ class PPOAgent:
         if mask is not None:
             action *= mask
             log_prob *= mask
-
+        print(action)
         return action, log_prob
 
     def value(self, state, mask):
