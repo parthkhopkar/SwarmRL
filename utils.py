@@ -58,3 +58,11 @@ def get_mask(size, max_size):
     mask = np.zeros(max_size)
     mask[-size:] = 1
     return np.expand_dims(mask, -1)
+
+def get_decentralized_mask(non_action_entities, num_drones):
+    masks = [np.zeros(non_action_entities+num_drones) for _ in range(num_drones)]
+    for i, mask in enumerate(masks):
+        mask[-num_drones+i] = 1
+    masks = np.array(masks)
+    masks = np.expand_dims(masks, -1)
+    return masks
