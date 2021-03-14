@@ -123,9 +123,9 @@ class PPOAgent:
                     tf.summary.scalar('Critic Loss', critic_loss, step=self.steps)
 
     def act(self, state, mask=None, training=False):
-        # state = utils.add_batch_dim(state)
-        # if mask is not None:
-        #     mask = utils.add_batch_dim(mask)
+        state = utils.add_batch_dim(state)
+        if mask is not None:
+            mask = utils.add_batch_dim(mask)
         # state has batch dim of 1.
         action, log_prob = self.act_batch(state, mask, training)
 

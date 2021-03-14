@@ -36,8 +36,8 @@ NOISE = 0.0
 ACTION_BOUND = 5. * DT
 
 ROLLOUT_STEPS = 8
-TRAIN_FREQUENCY = 4096
-T_MAX = 3000
+TRAIN_FREQUENCY = 128
+T_MAX = 572
 
 
 def set_init_weights(model):
@@ -94,6 +94,7 @@ def train(agent, value_only=False):
     num_drones = MAX_NUM_DRONES  # np.random.randint(MIN_NUM_DRONES, MAX_NUM_DRONES + 1)
     num_obstacles = MAX_NUM_OBSTACLES  # np.random.randint(MIN_NUM_OBSTACLES, MAX_NUM_OBSTACLES + 1)
     num_goals = 1
+    num_total_nodes = num_goals + num_obstacles + num_drones
     env = GoalAviary(gui=False, 
                     record=False,
                     num_drones=num_drones,
@@ -128,13 +129,16 @@ def train(agent, value_only=False):
             # Perform action in env
             next_obs, reward, done, info = env.step(action)
 
+            # Process reward
+            padded_rewards = utils.pad_data(np.array([reward[agent_idx] for agent_idx in range(num_drones)]), num_total_nodes, [0])
+
             next_states = np.array([next_obs[agent_idx]['nodes'][np.newaxis,...] for agent_idx in range(num_drones)])  # [num_drones, 1, num_total_nodes, 4]
             next_edges = np.array([next_obs[agent_idx]['edges'] for agent_idx in range(num_drones)])  # [num_drones, num_total_nodes, num_total_nodes, 4]
 
             # Store all the transitions
             for agent_idx in range(num_drones): 
-                agent.store_transition([states[agent_idx], edges[agent_idx]], action_batch[agent_idx], padded_rewards[agent_idx],
-                                  log_probs[agent_idx], [next_states[agent_idx], next_edges], done, masks[agent_idx])
+                agent.store_transition([states[agent_idx], edges[agent_idx]], action_batch[agent_idx], padded_rewards,
+                                  log_probs[agent_idx], [next_states[agent_idx], next_edges[agent_idx]], done['__any__'], masks[agent_idx])
 
             states = next_states
             edges = next_edges
@@ -144,10 +148,11 @@ def train(agent, value_only=False):
             # if done['__any__'] or (t == T_MAX - 1):
             #     agent.finish_rollout([states, edges], done['__any__'], mask)
 
-            # if step % TRAIN_FREQUENCY == 0:
-            #     agent.update(ARGS.batch_size, actor_steps=int(not value_only))
-            # if done['__any__']:
-            #     break
+            if step % TRAIN_FREQUENCY == 0:
+                print('Training')
+                agent.update(ARGS.batch_size, actor_steps=int(not value_only))
+            if done['__any__']:
+                break
 
         ts.append(t)
         reward_all_episodes.append(reward_episode)
