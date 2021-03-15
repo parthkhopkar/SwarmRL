@@ -37,17 +37,24 @@ class NStepRolloutBuffer:
 
     def finish_path(self, next_value):
         v = next_value
-
         discounted_r = []
         for r in self.reward_buffer[::-1]:
+            # print('REWARD', r)
+            # print('VALUE', v)
             v = r + self.gamma * v
+            # print('DISCOUNTED REWARD', v)
             discounted_r.append(v)
 
         discounted_r = discounted_r[::-1]
+        # print('DISCOUNTED REWARD BUFFER SHAPE', np.array(discounted_r).shape)
 
-        memory_batch = zip(self.state_buffer, self.action_buffer, discounted_r,
-                           self.log_prob_buffer, self.mask_buffer)
-        self.memory.extend(memory_batch)
+        for i in range(len(self.action_buffer)):
+            memory_batch = zip([[self.state_buffer[i][0][j], self.state_buffer[i][1][j]] for j in range(len(self.state_buffer[i][0]))], 
+                                 self.action_buffer[i].numpy(), 
+                                 discounted_r[i],
+                                 self.log_prob_buffer[i].numpy(), 
+                                 self.mask_buffer[i])
+            self.memory.extend(memory_batch)
 
         self.clear_cache()
 

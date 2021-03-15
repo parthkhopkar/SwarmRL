@@ -8,7 +8,7 @@ import numpy as np
 from swarmnet import SwarmNet
 from swarmnet.modules import MLP
 from swarmnet.utils import save_model, load_model, one_hot, load_model_params
-from tensorflow.python.keras.backend import update
+from tensorflow.python.keras.backend import dtype, update
 
 import utils
 from ppo_agent import ACTOR_UPDATE_STEPS, PPOAgent
@@ -130,15 +130,23 @@ def train(agent, value_only=False):
             next_obs, reward, done, info = env.step(action)
 
             # Process reward
-            padded_rewards = utils.pad_data(np.array([reward[agent_idx] for agent_idx in range(num_drones)]), num_total_nodes, [0])
+            # padded_rewards = utils.pad_data(np.array([reward[agent_idx] for agent_idx in range(num_drones)]), num_total_nodes, [0])
+            # Convert to sparse shape [num_drones, num_total_nodes]
+            padded_rewards = np.zeros((num_drones, num_total_nodes), dtype=np.float32)
+            for agent_idx in range(num_drones):
+                padded_rewards[agent_idx][-num_drones+agent_idx] = reward[agent_idx]
 
             next_states = np.array([next_obs[agent_idx]['nodes'][np.newaxis,...] for agent_idx in range(num_drones)])  # [num_drones, 1, num_total_nodes, 4]
             next_edges = np.array([next_obs[agent_idx]['edges'] for agent_idx in range(num_drones)])  # [num_drones, num_total_nodes, num_total_nodes, 4]
 
-            # Store all the transitions
-            for agent_idx in range(num_drones): 
-                agent.store_transition([states[agent_idx], edges[agent_idx]], action_batch[agent_idx], padded_rewards,
-                                  log_probs[agent_idx], [next_states[agent_idx], next_edges[agent_idx]], done['__any__'], masks[agent_idx])
+            # Store all the transitions per drone
+            # for agent_idx in range(num_drones): 
+            #     agent.store_transition([states[agent_idx], edges[agent_idx]], action_batch[agent_idx], padded_rewards,
+            #                       log_probs[agent_idx], [next_states[agent_idx], next_edges[agent_idx]], done['__any__'], masks[agent_idx])
+            
+            # Store batch of transitions
+            agent.store_transition([states, edges], action_batch, padded_rewards,
+                                   log_probs, [next_states, next_edges], done['__any__'], masks)
 
             states = next_states
             edges = next_edges

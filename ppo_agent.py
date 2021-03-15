@@ -161,11 +161,16 @@ class PPOAgent:
         value = self.model(state)[1]
         return value.numpy().squeeze(0) * mask
 
+    def value_batch(self, state, mask):
+        # state has batch dim of num_drones.
+        value = self.model(state)[1]
+        return value.numpy() * mask
+
     def store_transition(self, state, action, reward, log_prob, next_state, done, mask):
         self.rollout_buffer.add_transition(state, action, reward, log_prob, mask)
         if self.rollout_buffer.path_end():
             self.finish_rollout(next_state, done, mask)
 
     def finish_rollout(self, next_state, done, mask):
-        next_value = self.value(next_state, mask).squeeze(-1) * (1 - done)
+        next_value = self.value_batch(next_state, mask).squeeze(-1) * (1 - done)
         self.rollout_buffer.finish_path(next_value)
