@@ -1,4 +1,5 @@
 import os
+import time
 import argparse
 import datetime
 
@@ -37,7 +38,7 @@ ACTION_BOUND = 5. * DT
 
 ROLLOUT_STEPS = 8
 TRAIN_FREQUENCY = 128
-T_MAX = 572
+T_MAX = 3000
 
 
 def set_init_weights(model):
@@ -84,9 +85,9 @@ def train(agent, value_only=False):
     ts = []
     step = 0
     initial_positions = [[-1,1,Z], [-1,1.5,Z], [-1,0,Z],[-1,-0.5,Z],[-1,-1,Z]]
-    goal_x, goal_y = 2.,2.
+    goal_x, goal_y = 3.,3.
     goal_pos = [goal_x, goal_y, 0.05]
-    obstacle_x, obstacle_y = 0.5, 0.5
+    obstacle_x, obstacle_y = 1.5, 1.5
     obstacle_pos = [(obstacle_x, obstacle_y, Z)]
     obstacle_present = True
     static_entities = 1 + (1 if obstacle_present else 0)
@@ -95,7 +96,7 @@ def train(agent, value_only=False):
     num_obstacles = MAX_NUM_OBSTACLES  # np.random.randint(MIN_NUM_OBSTACLES, MAX_NUM_OBSTACLES + 1)
     num_goals = 1
     num_total_nodes = num_goals + num_obstacles + num_drones
-    env = GoalAviary(gui=False, 
+    env = GoalAviary(gui=True, 
                     record=False,
                     num_drones=num_drones,
                     act=ActionType.PID,
@@ -117,14 +118,16 @@ def train(agent, value_only=False):
 
         action = {i:np.array([0.,0.,0.]) for i in range(num_drones)}  # Action for all drones in an env
         reward_episode = 0
-        for t in range(T_MAX):
+        start=time.time()
+        for t in range(12*int(env.SIM_FREQ/env.AGGR_PHY_STEPS)):
+            print(f'\rTime step: {t}', end='')
             # Get action from PPO Agent
             # action_batch and log_probs dim: [num_drones, num_total_nodes, 2]
             action_batch, log_probs = agent.act_batch([states, edges], masks, training=False)
             
             # Build action to perform in env
             for agent_idx in range(num_drones):
-                 action[agent_idx][:2] = action_batch[agent_idx][-num_drones+agent_idx]
+                 action[agent_idx][:2] = action_batch[agent_idx][-num_drones+agent_idx] + states[agent_idx,0,-num_drones+agent_idx,2:]
 
             # Perform action in env
             next_obs, reward, done, info = env.step(action)
@@ -153,14 +156,17 @@ def train(agent, value_only=False):
             reward_episode += np.sum([reward[agent_idx] for agent_idx in range(num_drones)])
 
             step += 1
+            if t%env.SIM_FREQ == 0:
+                env.render()
+            sync(t, start, env.TIMESTEP)
             # if done['__any__'] or (t == T_MAX - 1):
             #     agent.finish_rollout([states, edges], done['__any__'], mask)
 
-            if step % TRAIN_FREQUENCY == 0:
-                print('Training')
-                agent.update(ARGS.batch_size, actor_steps=int(not value_only))
-            if done['__any__']:
-                break
+            # if step % TRAIN_FREQUENCY == 0:
+            #     print('Training')
+            #     agent.update(ARGS.batch_size, actor_steps=int(not value_only))
+            # if done['__any__']:
+            #     break
 
         ts.append(t)
         reward_all_episodes.append(reward_episode)
@@ -307,5 +313,5 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
-    utils.set_seed(ARGS.seed)
+    # utils.set_seed(ARGS.seed)
     main()
