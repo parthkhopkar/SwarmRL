@@ -10,8 +10,8 @@ from rollout_buffer import NStepRolloutBuffer
 LR_A = 0.0001  # learning rate for actor
 LR_C = 0.0001  # learning rate for critic
 
-ACTOR_UPDATE_STEPS = 10  # actor update steps
-CRITIC_UPDATE_STEPS = 10  # critic update steps
+ACTOR_UPDATE_STEPS = 5  # actor update steps
+CRITIC_UPDATE_STEPS = 5  # critic update steps
 
 # ppo-clip parameters
 EPSILON = 0.2
