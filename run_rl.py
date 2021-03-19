@@ -150,9 +150,11 @@ def train(agent, value_only=False):
             reward_episode += np.sum([reward[agent_idx] for agent_idx in range(num_drones)])
 
             step += 1
-            if t%env.SIM_FREQ == 0:
-                env.render()
-            sync(t, start, env.TIMESTEP)
+            if env.GUI:
+                sync(t, start, env.TIMESTEP)
+                if t%env.SIM_FREQ == 0:
+                    env.render()
+            
             if done['__any__'] or (t == T_MAX - 1):
                 agent.finish_rollout([states, edges], done['__any__'], masks)
 
@@ -174,7 +176,7 @@ def train(agent, value_only=False):
         print(f'\r Episode {episode} | Reward {reward_episode:8.2f} | ' +
               f'Avg. R {np.mean(reward_all_episodes[-100:]):8.2f} | Avg. End t = {np.mean(ts[-100:]):3.0f}',
               end='')
-        if (episode + 1) % 1000 == 0:
+        if (episode + 1) % 50 == 0:
             print('')
             # Hack for preserving the order or weights while saving
             goal_edge.trainable = True
