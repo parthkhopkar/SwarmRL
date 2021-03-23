@@ -7,8 +7,8 @@ import utils
 from rollout_buffer import NStepRolloutBuffer
 
 
-LR_A = 0.00001  # learning rate for actor
-LR_C = 0.00001  # learning rate for critic
+LR_A = 1e-6  # learning rate for actor
+LR_C = 1e-6  # learning rate for critic
 
 ACTOR_UPDATE_STEPS = 4  # actor update steps
 CRITIC_UPDATE_STEPS = 4  # critic update steps
