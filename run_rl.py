@@ -32,12 +32,12 @@ DT = 0.3
 
 BOID_SIZE = 2
 SPHERE_SIZE = 7
-NOISE = 0.2
+NOISE = 0.7
 
 ACTION_BOUND = 5. * DT
 
 ROLLOUT_STEPS = 8
-TRAIN_FREQUENCY = 3255
+TRAIN_FREQUENCY = 820
 T_MAX = 3000
 
 
@@ -96,7 +96,7 @@ def train(agent, value_only=False):
     num_obstacles = MAX_NUM_OBSTACLES  # np.random.randint(MIN_NUM_OBSTACLES, MAX_NUM_OBSTACLES + 1)
     num_goals = 1
     num_total_nodes = num_goals + num_obstacles + num_drones
-    env = GoalAviary(gui=False, 
+    env = GoalAviary(gui=True, 
                     record=False,
                     num_drones=num_drones,
                     act=ActionType.PID,
@@ -267,7 +267,7 @@ def main():
     swarmnet_agent = PPOAgent(actorcritic, NDIM,
                               action_bound=None,
                               rollout_steps=ROLLOUT_STEPS,
-                              memory_capacity=16384,
+                              memory_capacity=1e5,
                               summary_writer=summary_writer,
                               mode=ARGS.mode)
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
                         help='log directory')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of training steps')
-    parser.add_argument('--batch-size', type=int, default=16384,
+    parser.add_argument('--batch-size', type=int, default=4096,
                         help='batch size')
     parser.add_argument('--pretrain', action='store_true', default=False,
                         help='turn on pretraining of value function')

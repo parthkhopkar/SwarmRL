@@ -24,7 +24,7 @@ class PPOAgent:
 
     def __init__(self, model, action_size, action_bound=None, rollout_steps=1, memory_capacity=1e5, gamma=0.95, summary_writer=None, mode=0):
         self.model = model
-        self.action_logstd = tf.Variable(-2.0 * tf.ones(action_size), name='action_logstd')
+        self.action_logstd = tf.Variable(-5.0 * tf.ones(action_size), name='action_logstd')
 
         self.rollout_buffer = NStepRolloutBuffer(
             rollout_steps, memory_capacity, gamma=gamma, num_states=2)

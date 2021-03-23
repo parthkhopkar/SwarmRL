@@ -21,6 +21,6 @@
         "batch_norm": false,
         "kernel_l2": 0.001
     },
-    "output_bound": [1000.0, 1000.0, 0.2, 0.2],
+
     "learning_rate": 0.001
 }
