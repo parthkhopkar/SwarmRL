@@ -256,6 +256,8 @@ def main():
     swarmnet_params = load_model_params(ARGS.config)
 
     actorcritic = get_swarmnet_actorcritic(swarmnet_params, ARGS.log_dir)
+    if ARGS.mode == 1:
+        actorcritic.actor.trainable = False
     # NOTE: lock node_updater layer and final dense layer.
     if ARGS.mode == 2:
         actorcritic.encoding.node_decoder.trainable = False
