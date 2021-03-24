@@ -37,7 +37,7 @@ NOISE = 0.7
 ACTION_BOUND = 5. * DT
 
 ROLLOUT_STEPS = 8
-TRAIN_FREQUENCY = 3276
+TRAIN_FREQUENCY = 1638
 T_MAX = 3000
 
 
@@ -289,7 +289,7 @@ if __name__ == '__main__':
                         help='log directory')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of training steps')
-    parser.add_argument('--batch-size', type=int, default=16384,
+    parser.add_argument('--batch-size', type=int, default=8192,
                         help='batch size')
     parser.add_argument('--pretrain', action='store_true', default=False,
                         help='turn on pretraining of value function')
