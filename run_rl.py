@@ -76,6 +76,8 @@ def get_swarmnet_actorcritic(params, log_dir):
 
 
 def train(agent, value_only=False):
+    if value_only:
+        agent.model.encoding.trainable = False
     # Fix goal-agent edge function
     goal_edge = agent.model.encoding.edge_encoder.edge_encoders[0]
     if ARGS.mode > 0:
