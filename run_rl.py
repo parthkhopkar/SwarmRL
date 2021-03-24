@@ -37,7 +37,7 @@ NOISE = 0.7
 ACTION_BOUND = 5. * DT
 
 ROLLOUT_STEPS = 8
-TRAIN_FREQUENCY = 820
+TRAIN_FREQUENCY = 3276
 T_MAX = 3000
 
 
@@ -98,7 +98,7 @@ def train(agent, value_only=False):
     num_obstacles = MAX_NUM_OBSTACLES  # np.random.randint(MIN_NUM_OBSTACLES, MAX_NUM_OBSTACLES + 1)
     num_goals = 1
     num_total_nodes = num_goals + num_obstacles + num_drones
-    env = GoalAviary(gui=True, 
+    env = GoalAviary(gui=False, 
                     record=False,
                     num_drones=num_drones,
                     act=ActionType.PID,
@@ -289,7 +289,7 @@ if __name__ == '__main__':
                         help='log directory')
     parser.add_argument('--epochs', type=int, default=1,
                         help='number of training steps')
-    parser.add_argument('--batch-size', type=int, default=4096,
+    parser.add_argument('--batch-size', type=int, default=16384,
                         help='batch size')
     parser.add_argument('--pretrain', action='store_true', default=False,
                         help='turn on pretraining of value function')
