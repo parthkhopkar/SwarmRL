@@ -162,7 +162,10 @@ def train(agent, value_only=False):
 
             if step % TRAIN_FREQUENCY == 0:
                 print('Training')
-                agent.update(ARGS.batch_size, actor_steps=int(not value_only))
+                if value_only:
+                    agent.update(ARGS.batch_size, actor_steps=int(not value_only))
+                else:
+                    agent.update(ARGS.batch_size)
 
             if done['__any__']:
                 break
