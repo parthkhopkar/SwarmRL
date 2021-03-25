@@ -36,7 +36,7 @@ NOISE = 0.7
 
 ACTION_BOUND = 5. * DT
 
-ROLLOUT_STEPS = 8
+ROLLOUT_STEPS = 128
 TRAIN_FREQUENCY = 1638
 T_MAX = 3000
 
@@ -157,7 +157,7 @@ def train(agent, value_only=False):
                 if t%env.SIM_FREQ == 0:
                     env.render()
             
-            if done['__any__'] or (t == T_MAX - 1):
+            if done['__any__'] or (t == 12*int(env.SIM_FREQ/env.AGGR_PHY_STEPS) - 1):
                 agent.finish_rollout([states, edges], done['__any__'], masks)
 
             if step % TRAIN_FREQUENCY == 0:
